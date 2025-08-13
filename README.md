@@ -1,6 +1,6 @@
 # Table Encoder
 
-A PyTorch implementation of an in-context tabular transformer encoder that combines efficient 2D attention mechanisms with latent processing for scalable pretraining of tabular foundation models. The architecture is basically a re-implementation of the ConTextTab model as described in  (https://www.arxiv.org/pdf/2506.10707) which itself if a modified version of the TabPFN model (see https://www.nature.com/articles/s41586-024-08328-6).
+A PyTorch implementation of an in-context tabular transformer encoder that combines efficient 2D attention mechanisms with latent processing for scalable pretraining of tabular foundation models. The architecture is basically a re-implementation of **ConTextTab**  as described in (https://www.arxiv.org/pdf/2506.10707) which itself is a modified version of the **TabPFN** model (see https://www.nature.com/articles/s41586-024-08328-6).
 
 
 ## 🏗️ Architecture Overview
@@ -28,13 +28,17 @@ Given an input of shape **(B, (K + T), C, D)**, it processes the data using **2D
 
 ## Early layers
 
-### Row attention, i.e. learning local feature dependencies/interactions. 
+### Across-column attention, i.e. learning local feature dependencies/interactions. 
 
-Each row is treated as a sequence of **C** cells using **full-attention** (every cell can attend to every other cell in each row) with **R** becoming the batch-dimension.
+Each row is treated as a sequence of **C** cells using **full-attention** (every cell can attend to every other cell in each row) with **R** becoming the batch-dimension. 
 
-### Column attention, i.e. learning column-specific global statistics
+The input is reshaped from (B, R, C, D) -> ((B*R), C, D). In order to avoid batch-related OOM errors, the input is split into smaller chunks (see 'max_batch_size_col_sequence').
+
+### Across-row attention, i.e. learning column-specific global statistics
 
 Each column is treated as a sequence of **R** cells with **C** becoming the batch-dimension. 
+
+The input is reshaped from (B, R, C, D) -> ((B, C), R, D). In order to avoid sequence-length OOM errors, the input is processed in smaller chunks (see "max_batch_size_col_sequence").
 
 #### Downsampling using ISAB (Induced Set Attention Block)
 
@@ -46,7 +50,7 @@ The **latent representation (C, L + T, D)** is upsampled again to original input
 
 ## Later layers
 
-Subsequent layers apply **2D attention** on the **latent representation** directly, where the test-rows rely solely on the learned latent representation and do not have access to the context-rows anymore. 
+Subsequent layers apply **2D attention** without chunking on the **latent representation** directly, where the test-rows rely solely on the learned latent representation and do not have access to the context-rows anymore. 
 
 ## Output
 
@@ -61,14 +65,15 @@ The model eventually returns (B, T, D), i.e. the contextualized cell-embeddings 
 from tabular_transformer import TableEncoder
 
 config = {
-    'd_in': 128,              # Input embedding dimension
-    'd_out': 256,             # Output embedding dimension
-    'num_heads': 8,           # Number of attention heads
-    'n_latents': 64,          # Number of latent tokens
-    'n_isab_layers': 2,       # Number of 2D ISAB layers
-    'n_mab_layers': 1,        # Number of 2D MAB layers
-    'dropout': 0.1,           # Dropout probability
-    'num_labels': 5           # Output classes
+    'd_in': 128,                         # Input embedding dimension
+    'd_out': 256,                        # Output embedding dimension
+    'num_heads': 8,                      # Number of attention heads
+    'n_latents': 64,                     # Number of latent tokens
+    'n_isab_layers': 2,                  # Number of 2D ISAB layers
+    'n_mab_layers': 1,                   # Number of 2D MAB layers
+    'dropout': 0.1,                      # Dropout probability
+    'max_batch_size_col_sequence': 1024  # maximum pseudo-batch-size for cross-column attention
+    'max_batch_size_col_sequence': 100   # maximum pseudo-batch-size for cross-row attention
 }
 
 model = TableEncoder(config)
