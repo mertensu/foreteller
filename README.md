@@ -1,12 +1,11 @@
-# Table Encoder
+# Foreteller 🔮👁️✨
 
 A PyTorch implementation of an in-context tabular transformer encoder that combines efficient 2D attention mechanisms with latent processing for scalable pretraining of tabular foundation models. The architecture is basically a re-implementation of **ConTextTab**  as described in (https://www.arxiv.org/pdf/2506.10707) which itself is a modified version of the **TabPFN** model (see https://www.nature.com/articles/s41586-024-08328-6).
 
 
 ## 🏗️ Architecture Overview
 
-
-The input is a preprocessed dataset of shape **(R, C, D)** with **R** rows, **C** columns and **D**-dimensional cell-embeddings. The target column has to be at position -1 (last column). Some rows are part of the context **K** (used to learn from) and some representing the **T** test-rows (the ones for which we want to predict a target column). Whereas the context has access to the target, it is masked for test-rows. 
+The input is a preprocessed dataset of shape `(R, C, D)` with **R** rows, **C** columns and **D**-dimensional cell-embeddings. The target column has to be at position -1 (last column). Some rows are part of the context **K** (used to learn from) and some representing the **T** test-rows (the ones for which we want to predict a target column). Whereas the context has access to the target, it is masked for test-rows. 
 
 ```
 ┌─────┬─────┬─────┬─────┐
@@ -24,7 +23,7 @@ The input is a preprocessed dataset of shape **(R, C, D)** with **R** rows, **C*
 
 The Tabular Transformer processes tabular data through a multi-stage pipeline. 
 
-Given an input of shape **(B, (K + T), C, D)**, it processes the data using **2D attention**, alternating between row and column attention.
+Given an input of shape `(B, (K + T), C, D)`, it processes the data using **2D attention**, alternating between row and column attention.
 
 ## Early layers
 
@@ -32,21 +31,21 @@ Given an input of shape **(B, (K + T), C, D)**, it processes the data using **2D
 
 Each row is treated as a sequence of **C** cells using **full-attention** (every cell can attend to every other cell in each row) with **R** becoming the batch-dimension. 
 
-The input is reshaped from (B, R, C, D) -> ((B*R), C, D). In order to avoid batch-related OOM errors, the input is split into smaller chunks (see 'max_batch_size_col_sequence').
+The input is reshaped from `(B, R, C, D) -> ((B*R), C, D)`. In order to avoid batch-related OOM errors, the input is split into smaller chunks (see `max_batch_size_col_sequence`).
 
 ### Across-row attention, i.e. learning column-specific global statistics
 
 Each column is treated as a sequence of **R** cells with **C** becoming the batch-dimension. 
 
-The input is reshaped from (B, R, C, D) -> ((B, C), R, D). In order to avoid sequence-length OOM errors, the input is processed in smaller chunks (see "max_batch_size_col_sequence").
+The input is reshaped from `(B, R, C, D) -> ((B, C), R, D)`. In order to avoid sequence-length OOM errors, the input is processed in smaller chunks (see `max_batch_size_col_sequence`).
 
 #### Downsampling using ISAB (Induced Set Attention Block)
 
-Due to the **quadratic complexity**, the potentially large sequence (datasets with many rows) is first downsampled using **inducing points** as introduced here (https://arxiv.org/pdf/1810.00825). Specifically, we choose a **latent parameter tensor** of shape **(L, D)**. This latent tensor is concatenated with the **T test rows** of shape **(C, T, D)** along the sequence-dimension to get **(C, L + T, D)**. The attention complexity is reduced from **O(R²)** to **O((L + T)²)**, where **L << R**, making it computationally feasible for large datasets. 
+Due to the **quadratic complexity**, the potentially large sequence (datasets with many rows) is first downsampled using **inducing points** as introduced here (https://arxiv.org/pdf/1810.00825). Specifically, we choose a **latent parameter tensor** of shape **(L, D)**. This latent tensor is concatenated with the **T test rows** of shape `(C, T, D)` along the sequence-dimension to get `(C, L + T, D)`. The attention complexity is reduced from **O(R²)** to **O((L + T)²)**, where **L << R**, making it computationally feasible for large datasets. 
 
 #### Upsampling
 
-The **latent representation (C, L + T, D)** is upsampled again to original input dimensionality **(C, R, D)**.
+The latent representation `(C, L + T, D)` is upsampled again to original input dimensionality `(C, R, D)`.
 
 ## Later layers
 
@@ -54,7 +53,7 @@ Subsequent layers apply **2D attention** without chunking on the **latent repres
 
 ## Output
 
-The model eventually returns (B, T, D), i.e. the contextualized cell-embeddings for the T test-rows of the target column. You can use those for downstream tasks by adding an output projection of your choice. 
+The model eventually returns `(B, T, D)`, i.e. the contextualized cell-embeddings for the T test-rows of the target column. You can use those for downstream tasks by adding an output projection of your choice. 
 
 
 ## 🚀 Usage
@@ -62,7 +61,7 @@ The model eventually returns (B, T, D), i.e. the contextualized cell-embeddings 
 ### **Basic Configuration**
 
 ```python
-from tabular_transformer import TableEncoder
+from foreteller import Foreteller
 
 config = {
     'd_in': 128,                         # Input embedding dimension
@@ -76,7 +75,7 @@ config = {
     'max_batch_size_col_sequence': 100   # maximum pseudo-batch-size for cross-row attention
 }
 
-model = TableEncoder(config)
+model = Foreteller(config)
 ```
 
 ### **Input Format**
@@ -145,7 +144,7 @@ Output (B, I+T, C, D)
 
 ## 🤝 Contributing
 
-This implementation provides a solid foundation for tabular transformer research. Key areas for extension:
+This repo provides a clean and concise implementation of the "engine" underlying current SOTA tabular foundation models. My hope is that it facilitates deeper understanding and easier adjustments based on new developments in the field. 
 
 - **Attention Variants**: Implement different attention mechanisms
 - **Architecture Modifications**: Explore different layer combinations

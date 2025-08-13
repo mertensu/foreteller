@@ -1,6 +1,5 @@
 import torch
-from tabular_transformer import TableEncoder
-
+from foreteller import Foreteller
 
 
 if __name__ == "__main__":
@@ -10,19 +9,19 @@ if __name__ == "__main__":
     num_rows = 5000
     num_cols = 10
     x = torch.randn(1, num_rows, num_cols, embedding_dim)
-    
+
     config = {
-        'd_in': embedding_dim,
-        'd_out': 256,
-        'num_heads': 8,
-        'n_latents': 16,
-        'n_isab_layers': 2,
-        'n_mab_layers': 2,
-        'dropout': 0.0,
-        'num_labels': 5,
-        'max_batch_size_col_sequence': 1024,
-        'max_batch_size_row_sequence': 100
+        "d_in": embedding_dim,
+        "d_out": 256,
+        "num_heads": 8,
+        "n_latents": 16,
+        "n_isab_layers": 2,
+        "n_mab_layers": 2,
+        "dropout": 0.0,
+        "num_labels": 5,
+        "max_batch_size_col_sequence": 1024,
+        "max_batch_size_row_sequence": 100,
     }
-    model = TableEncoder(config)
+    model = Foreteller(config)
     out = model(x, n_context)
-    print(f"TableEncoder output shape: {out.shape}")
+    print(f"Foreteller output shape: {out.shape}")
