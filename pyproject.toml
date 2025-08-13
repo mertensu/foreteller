@@ -1,0 +1,9 @@
+[project]
+name = "tabulartransformer"
+version = "0.1.0"
+description = "A Transformer encoder for tabular data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ruff>=0.12.8",
+]
